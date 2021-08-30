@@ -19,6 +19,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -26,17 +27,25 @@ import (
 // UUID
 //--------------------
 
+// Version represents a UUID's version.
+type Version byte
+
 // UUID versions and variants.
 const (
-	V1 byte = 1
-	V3 byte = 3
-	V4 byte = 4
-	V5 byte = 5
+	V1 Version = 1
+	V3 Version = 3
+	V4 Version = 4
+	V5 Version = 5
+)
 
-	VariantNCS       byte = 0
-	VariantRFC4122   byte = 4
-	VariantMicrosoft byte = 6
-	VariantFuture    byte = 7
+// Variant represents a UUID's variant.
+type Variant byte
+
+const (
+	VariantNCS       Variant = 0 // Reserved, NCS backward compatibility.
+	VariantRFC4122   Variant = 4 // The variant specified in RFC4122.
+	VariantMicrosoft Variant = 6 // Reserved, Microsoft Corporation backward compatibility.
+	VariantFuture    Variant = 7 // Reserved for future definition.
 )
 
 // UUID represents a universal identifier with 16 bytes.
@@ -131,29 +140,51 @@ func NewV5(ns UUID, name []byte) (UUID, error) {
 	return uuid, nil
 }
 
-// FromHex creates a UUID based on the passed hex string which has to
-// have the length of 32 bytes.
-func FromHex(source string) (UUID, error) {
-	uuid := UUID{}
-	if len([]byte(source)) != 32 {
-		return uuid, fmt.Errorf("source length is not 32")
+// Parse creates a UUID based on the given hex string which has to have
+// one of the following formats:
+//
+// - xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// - urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// - {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+// - xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//
+// The net data always has to have the length of 32 bytes.
+func Parse(source string) (UUID, error) {
+	var uuid UUID
+	var hexSource string
+	var err error
+	switch len(source) {
+	case 36:
+		hexSource, err = parseSource(source, "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+	case 36 + 9:
+		hexSource, err = parseSource(source, "urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+	case 36 + 2:
+		hexSource, err = parseSource(source, "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}")
+	case 32:
+		hexSource, err = parseSource(source, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+	default:
+		return uuid, fmt.Errorf("invalid source format: %q", source)
 	}
-	raw, err := hex.DecodeString(source)
+	if err != nil {
+		return uuid, err
+	}
+	hexData, err := hex.DecodeString(hexSource)
 	if err != nil {
 		return uuid, fmt.Errorf("source is no hex value: %w", err)
 	}
-	copy(uuid[:], raw)
+	copy(uuid[:], hexData)
+	// TODO: Validate UUID (version, variant).
 	return uuid, nil
 }
 
 // Version returns the version number of the UUID algorithm.
-func (uuid UUID) Version() byte {
-	return uuid[6] & 0xf0 >> 4
+func (uuid UUID) Version() Version {
+	return Version(uuid[6] & 0xf0 >> 4)
 }
 
 // Variant returns the variant of the UUID.
-func (uuid UUID) Variant() byte {
-	return uuid[8] & 0xe0 >> 5
+func (uuid UUID) Variant() Variant {
+	return Variant(uuid[8] & 0xe0 >> 5)
 }
 
 // Copy returns a copy of the UUID.
@@ -190,42 +221,73 @@ func (uuid UUID) String() string {
 }
 
 // setVersion sets the version part of the UUID.
-func (uuid *UUID) setVersion(v byte) {
-	uuid[6] = (uuid[6] & 0x0f) | (v << 4)
+func (uuid *UUID) setVersion(v Version) {
+	uuid[6] = (uuid[6] & 0x0f) | (byte(v) << 4)
 }
 
 // setVariant sets the variant part of the UUID.
-func (uuid *UUID) setVariant(v byte) {
-	uuid[8] = (uuid[8] & 0x1f) | (v << 5)
+func (uuid *UUID) setVariant(v Variant) {
+	uuid[8] = (uuid[8] & 0x1f) | (byte(v) << 5)
 }
 
 // NamespaceDNS returns the DNS namespace UUID for a v3 or a v5.
 func NamespaceDNS() UUID {
-	uuid, _ := FromHex("6ba7b8109dad11d180b400c04fd430c8")
+	uuid, _ := Parse("6ba7b8109dad11d180b400c04fd430c8")
 	return uuid
 }
 
 // NamespaceURL returns the URL namespace UUID for a v3 or a v5.
 func NamespaceURL() UUID {
-	uuid, _ := FromHex("6ba7b8119dad11d180b400c04fd430c8")
+	uuid, _ := Parse("6ba7b8119dad11d180b400c04fd430c8")
 	return uuid
 }
 
 // NamespaceOID returns the OID namespace UUID for a v3 or a v5.
 func NamespaceOID() UUID {
-	uuid, _ := FromHex("6ba7b8129dad11d180b400c04fd430c8")
+	uuid, _ := Parse("6ba7b8129dad11d180b400c04fd430c8")
 	return uuid
 }
 
 // NamespaceX500 returns the X.500 namespace UUID for a v3 or a v5.
 func NamespaceX500() UUID {
-	uuid, _ := FromHex("6ba7b8149dad11d180b400c04fd430c8")
+	uuid, _ := Parse("6ba7b8149dad11d180b400c04fd430c8")
 	return uuid
 }
 
 //--------------------
 // PRIVATE HELPERS
 //--------------------
+
+// parseSource parses a source based on the given pattern. Only the
+// char x of the pattern is interpreted as hex char. If the result is
+// longer than 32 bytes it's an error.
+func parseSource(source, pattern string) (string, error) {
+	lower := []byte(strings.ToLower(source))
+	raw := make([]byte, 32)
+	rawPos := 0
+	patternPos := 0
+	patternLen := len(pattern)
+	for i, b := range lower {
+		if patternPos == patternLen {
+			return "", fmt.Errorf("source %q too long for pattern %q", source, pattern)
+		}
+		switch pattern[patternPos] {
+		case 'x':
+			if (b < '0' || b > '9') && (b < 'a' || b > 'f') {
+				return "", fmt.Errorf("source char %d is no hex char: %c", i, b)
+			}
+			raw[rawPos] = b
+			rawPos++
+			patternPos++
+		default:
+			if b != pattern[patternPos] {
+				return "", fmt.Errorf("source char %d does not match pattern: %x is not %c", i, b, pattern[patternPos])
+			}
+			patternPos++
+		}
+	}
+	return string(raw), nil
+}
 
 // macAddress retrieves the MAC address of the computer.
 func macAddress() []byte {
