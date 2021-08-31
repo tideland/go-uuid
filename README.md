@@ -4,7 +4,7 @@
 [![GitHub license](https://img.shields.io/badge/license-New%20BSD-blue.svg)](https://raw.githubusercontent.com/tideland/go-uuid/master/LICENSE)
 [![Go Module](https://img.shields.io/github/go-mod/go-version/tideland/go-uuid)](https://github.com/tideland/go-uuid/blob/master/go.mod)
 [![GoDoc](https://godoc.org/tideland.dev/go/uuid?status.svg)](https://pkg.go.dev/mod/tideland.dev/go/uuid?tab=packages)
-![Workflow](https://github.com/tideland/go-uuid/actions/workflows/go/badge.svg)
+![Workflow](https://github.com/tideland/go-uuid/actions/workflows/go.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tideland/go-uuid)](https://goreportcard.com/report/tideland.dev/go/uuid)
 
 ## Description
