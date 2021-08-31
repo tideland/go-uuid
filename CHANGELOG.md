@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.1 (2021-08-30)
+## v0.1.1 (2021-08-31)
 
 * Renamed FromHex() to Parse() and improved it
 
