@@ -121,4 +121,17 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func FuzzParse(f *testing.F) {
+	ns := uuid.NamespaceOID()
+	f.Add([]byte{1, 3})
+	f.Fuzz(func(t *testing.T, name []byte) {
+		assert := asserts.NewTesting(t, asserts.FailStop)
+		u, _ := uuid.NewV3(ns, name)
+		uuidT, err := uuid.Parse(u.String())
+		assert.NoError(err)
+		assert.Equal(uuidT.Version(), uuid.V3)
+		assert.Equal(uuidT.Variant(), uuid.VariantRFC4122)
+	})
+}
+
 // EOF
