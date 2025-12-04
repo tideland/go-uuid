@@ -1,20 +1,17 @@
 // Tideland Go UUID - Unit Tests
 //
-// Copyright (C) 2021 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2021-2025 Frank Mueller / Tideland / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-package uuid_test // import "tideland.dev/go/uuid"
-
-//--------------------
-// IMPORTS
-//--------------------
+package uuid_test
 
 import (
 	"testing"
 
-	"tideland.dev/go/audit/asserts"
+	"tideland.dev/go/asserts/verify"
+
 	"tideland.dev/go/uuid"
 )
 
