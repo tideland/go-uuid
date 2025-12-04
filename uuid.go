@@ -142,6 +142,68 @@ func NewV5(ns UUID, name []byte) (UUID, error) {
 	return uuid, nil
 }
 
+// NewV6 generates a new UUID based on version 6 (reordered Gregorian timestamp).
+// UUIDv6 is a field-compatible version of UUIDv1, reordered for improved DB locality.
+// The timestamp bytes are stored from most to least significant for better sortability.
+func NewV6() (UUID, error) {
+	uuid := UUID{}
+	epoch := int64(0x01b21dd213814000)
+	now := uint64(time.Now().UnixNano()/100 + epoch)
+
+	clockSeqRand := [2]byte{}
+	if _, err := rand.Read(clockSeqRand[:]); err != nil {
+		return uuid, err
+	}
+	clockSeq := binary.LittleEndian.Uint16(clockSeqRand[:])
+
+	// Extract timestamp components
+	timeHigh := uint32((now >> 28) & 0xffffffff)   // Most significant 32 bits
+	timeMid := uint16((now >> 12) & 0xffff)        // Middle 16 bits
+	timeLow := uint16(now & 0x0fff)                // Least significant 12 bits
+	clockSeq &= 0x3fff
+
+	// Store in big-endian order for v6
+	binary.BigEndian.PutUint32(uuid[0:4], timeHigh)
+	binary.BigEndian.PutUint16(uuid[4:6], timeMid)
+	binary.BigEndian.PutUint16(uuid[6:8], timeLow)
+	binary.BigEndian.PutUint16(uuid[8:10], clockSeq)
+	copy(uuid[10:16], cachedMACAddress)
+
+	uuid.setVersion(V6)
+	uuid.setVariant(VariantRFC4122)
+	return uuid, nil
+}
+
+// NewV7 generates a new UUID based on version 7 (Unix Epoch timestamp).
+// UUIDv7 features a time-ordered value field derived from Unix Epoch timestamp
+// in milliseconds with improved entropy characteristics.
+func NewV7() (UUID, error) {
+	uuid := UUID{}
+
+	// Get Unix timestamp in milliseconds
+	now := time.Now()
+	unixMs := uint64(now.UnixMilli())
+
+	// Fill first 48 bits with timestamp
+	uuid[0] = byte(unixMs >> 40)
+	uuid[1] = byte(unixMs >> 32)
+	uuid[2] = byte(unixMs >> 24)
+	uuid[3] = byte(unixMs >> 16)
+	uuid[4] = byte(unixMs >> 8)
+	uuid[5] = byte(unixMs)
+
+	// Fill remaining bits with random data
+	randData := make([]byte, 10)
+	if _, err := rand.Read(randData); err != nil {
+		return uuid, err
+	}
+	copy(uuid[6:], randData)
+
+	uuid.setVersion(V7)
+	uuid.setVariant(VariantRFC4122)
+	return uuid, nil
+}
+
 // Parse creates a UUID based on the given hex string which has to have
 // one of the following formats:
 //
