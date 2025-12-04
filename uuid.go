@@ -1,11 +1,11 @@
 // Tideland Go UUID
 //
-// Copyright (C) 2021 Frank Mueller / Tideland / Oldenburg / Germany
+// Copyright (C) 2021-2025 Frank Mueller / Tideland / Germany
 //
 // All rights reserved. Use of this source code is governed
 // by the new BSD license.
 
-package uuid // import "tideland.dev/go/uuid"
+package uuid
 
 //--------------------
 // IMPORTS
