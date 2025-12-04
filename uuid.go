@@ -36,6 +36,8 @@ const (
 	V3 Version = 3
 	V4 Version = 4
 	V5 Version = 5
+	V6 Version = 6
+	V7 Version = 7
 )
 
 // Variant represents a UUID's variant.
