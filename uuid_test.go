@@ -132,4 +132,190 @@ func TestParse(t *testing.T) {
 	}
 }
 
+// TestV6Sortability tests that UUIDv6 values are sortable by creation time.
+func TestV6Sortability(t *testing.T) {
+	uuids := make([]uuid.UUID, 100)
+	for i := 0; i < 100; i++ {
+		u, err := uuid.NewV6()
+		verify.NoError(t, err)
+		uuids[i] = u
+	}
+
+	// Verify each UUID is greater than or equal to the previous
+	for i := 1; i < len(uuids); i++ {
+		prev := uuids[i-1].String()
+		curr := uuids[i].String()
+		verify.True(t, curr >= prev, "UUIDs should be sortable")
+	}
+}
+
+// TestV7Sortability tests that UUIDv7 values are sortable by creation time.
+func TestV7Sortability(t *testing.T) {
+	uuids := make([]uuid.UUID, 100)
+	for i := 0; i < 100; i++ {
+		u, err := uuid.NewV7()
+		verify.NoError(t, err)
+		uuids[i] = u
+	}
+
+	// Verify each UUID is greater than or equal to the previous
+	for i := 1; i < len(uuids); i++ {
+		prev := uuids[i-1].String()
+		curr := uuids[i].String()
+		verify.True(t, curr >= prev, "UUIDs should be sortable")
+	}
+}
+
+// TestV7Monotonicity tests that UUIDv7 values are monotonic within same millisecond.
+func TestV7Monotonicity(t *testing.T) {
+	// Generate many UUIDs quickly to ensure some share the same millisecond
+	uuids := make([]uuid.UUID, 1000)
+	for i := 0; i < 1000; i++ {
+		u, err := uuid.NewV7()
+		verify.NoError(t, err)
+		uuids[i] = u
+	}
+
+	// Check that all UUIDs are unique
+	seen := make(map[string]bool)
+	for _, u := range uuids {
+		s := u.String()
+		verify.False(t, seen[s], "All UUIDs should be unique")
+		seen[s] = true
+	}
+}
+
+// TestConcurrentGeneration tests concurrent UUID generation.
+func TestConcurrentGeneration(t *testing.T) {
+	const goroutines = 10
+	const uuidsPerGoroutine = 100
+
+	type result struct {
+		uuid uuid.UUID
+		err  error
+	}
+
+	results := make(chan result, goroutines*uuidsPerGoroutine)
+
+	// Generate UUIDs concurrently
+	for g := 0; g < goroutines; g++ {
+		go func() {
+			for i := 0; i < uuidsPerGoroutine; i++ {
+				u, err := uuid.NewV7()
+				results <- result{uuid: u, err: err}
+			}
+		}()
+	}
+
+	// Collect results
+	seen := make(map[string]bool)
+	for i := 0; i < goroutines*uuidsPerGoroutine; i++ {
+		r := <-results
+		verify.NoError(t, r.err)
+		s := r.uuid.String()
+		verify.False(t, seen[s], "Concurrent UUIDs should be unique")
+		seen[s] = true
+	}
+}
+
+// TestNamespaceStability tests that name-based UUIDs are stable.
+func TestNamespaceStability(t *testing.T) {
+	ns := uuid.NamespaceDNS()
+	name := []byte("www.example.com")
+
+	// Generate same name-based UUID multiple times
+	uuid1, err := uuid.NewV5(ns, name)
+	verify.NoError(t, err)
+
+	uuid2, err := uuid.NewV5(ns, name)
+	verify.NoError(t, err)
+
+	uuid3, err := uuid.NewV5(ns, name)
+	verify.NoError(t, err)
+
+	// All should be identical
+	verify.Equal(t, uuid1.String(), uuid2.String())
+	verify.Equal(t, uuid2.String(), uuid3.String())
+}
+
+// TestRawAndCopy tests Raw and Copy methods.
+func TestRawAndCopy(t *testing.T) {
+	u, err := uuid.NewV7()
+	verify.NoError(t, err)
+
+	// Test Raw returns correct array
+	raw := u.Raw()
+	verify.Equal(t, len(raw), 16)
+	for i := 0; i < 16; i++ {
+		verify.Equal(t, raw[i], u[i])
+	}
+
+	// Test Copy creates independent copy
+	copy := u.Copy()
+	verify.Equal(t, u.String(), copy.String())
+
+	// Modify original, copy should be unchanged
+	original := u.String()
+	u[0] = 0xFF
+	verify.Different(t, u.String(), original)
+	verify.Equal(t, copy.String(), original)
+}
+
+// BenchmarkNewV1 benchmarks UUID v1 generation.
+func BenchmarkNewV1(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, _ = uuid.NewV1()
+	}
+}
+
+// BenchmarkNewV4 benchmarks UUID v4 generation.
+func BenchmarkNewV4(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, _ = uuid.NewV4()
+	}
+}
+
+// BenchmarkNewV6 benchmarks UUID v6 generation.
+func BenchmarkNewV6(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, _ = uuid.NewV6()
+	}
+}
+
+// BenchmarkNewV7 benchmarks UUID v7 generation.
+func BenchmarkNewV7(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, _ = uuid.NewV7()
+	}
+}
+
+// BenchmarkNewV5 benchmarks UUID v5 generation.
+func BenchmarkNewV5(b *testing.B) {
+	ns := uuid.NamespaceDNS()
+	name := []byte("www.example.com")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = uuid.NewV5(ns, name)
+	}
+}
+
+// BenchmarkParse benchmarks UUID parsing.
+func BenchmarkParse(b *testing.B) {
+	u, _ := uuid.NewV7()
+	s := u.String()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = uuid.Parse(s)
+	}
+}
+
+// BenchmarkString benchmarks UUID string formatting.
+func BenchmarkString(b *testing.B) {
+	u, _ := uuid.NewV7()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u.String()
+	}
+}
+
 // EOF
