@@ -131,6 +131,7 @@
 //
 // UUIDv7 generation is highly performant and suitable for high-throughput applications.
 // Benchmark results show generation rates of millions of UUIDs per second on modern hardware.
+
 package uuid
 
 // EOF

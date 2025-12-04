@@ -31,7 +31,7 @@ func TestStandard(t *testing.T) {
 	// Check for copy
 	uuidB := uuid.New()
 	uuidC := uuidB.Copy()
-	for i := 0; i < len(uuidB); i++ {
+	for i := range len(uuidB) {
 		uuidB[i] = 0
 	}
 	verify.Different(t, uuidB, uuidC)
@@ -135,7 +135,7 @@ func TestParse(t *testing.T) {
 // TestV6Sortability tests that UUIDv6 values are sortable by creation time.
 func TestV6Sortability(t *testing.T) {
 	uuids := make([]uuid.UUID, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		u, err := uuid.NewV6()
 		verify.NoError(t, err)
 		uuids[i] = u
@@ -152,7 +152,7 @@ func TestV6Sortability(t *testing.T) {
 // TestV7Sortability tests that UUIDv7 values are sortable by creation time.
 func TestV7Sortability(t *testing.T) {
 	uuids := make([]uuid.UUID, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		u, err := uuid.NewV7()
 		verify.NoError(t, err)
 		uuids[i] = u
@@ -170,7 +170,7 @@ func TestV7Sortability(t *testing.T) {
 func TestV7Monotonicity(t *testing.T) {
 	// Generate many UUIDs quickly to ensure some share the same millisecond
 	uuids := make([]uuid.UUID, 1000)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		u, err := uuid.NewV7()
 		verify.NoError(t, err)
 		uuids[i] = u
@@ -198,9 +198,9 @@ func TestConcurrentGeneration(t *testing.T) {
 	results := make(chan result, goroutines*uuidsPerGoroutine)
 
 	// Generate UUIDs concurrently
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
-			for i := 0; i < uuidsPerGoroutine; i++ {
+			for range uuidsPerGoroutine {
 				u, err := uuid.NewV7()
 				results <- result{uuid: u, err: err}
 			}
@@ -209,7 +209,7 @@ func TestConcurrentGeneration(t *testing.T) {
 
 	// Collect results
 	seen := make(map[string]bool)
-	for i := 0; i < goroutines*uuidsPerGoroutine; i++ {
+	for range goroutines * uuidsPerGoroutine {
 		r := <-results
 		verify.NoError(t, r.err)
 		s := r.uuid.String()
@@ -246,7 +246,7 @@ func TestRawAndCopy(t *testing.T) {
 	// Test Raw returns correct array
 	raw := u.Raw()
 	verify.Equal(t, len(raw), 16)
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		verify.Equal(t, raw[i], u[i])
 	}
 
@@ -263,28 +263,28 @@ func TestRawAndCopy(t *testing.T) {
 
 // BenchmarkNewV1 benchmarks UUID v1 generation.
 func BenchmarkNewV1(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = uuid.NewV1()
 	}
 }
 
 // BenchmarkNewV4 benchmarks UUID v4 generation.
 func BenchmarkNewV4(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = uuid.NewV4()
 	}
 }
 
 // BenchmarkNewV6 benchmarks UUID v6 generation.
 func BenchmarkNewV6(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = uuid.NewV6()
 	}
 }
 
 // BenchmarkNewV7 benchmarks UUID v7 generation.
 func BenchmarkNewV7(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = uuid.NewV7()
 	}
 }
@@ -293,8 +293,8 @@ func BenchmarkNewV7(b *testing.B) {
 func BenchmarkNewV5(b *testing.B) {
 	ns := uuid.NamespaceDNS()
 	name := []byte("www.example.com")
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, _ = uuid.NewV5(ns, name)
 	}
 }
@@ -303,8 +303,8 @@ func BenchmarkNewV5(b *testing.B) {
 func BenchmarkParse(b *testing.B) {
 	u, _ := uuid.NewV7()
 	s := u.String()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, _ = uuid.Parse(s)
 	}
 }
@@ -312,8 +312,8 @@ func BenchmarkParse(b *testing.B) {
 // BenchmarkString benchmarks UUID string formatting.
 func BenchmarkString(b *testing.B) {
 	u, _ := uuid.NewV7()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = u.String()
 	}
 }

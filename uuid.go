@@ -157,9 +157,9 @@ func NewV6() (UUID, error) {
 	clockSeq := binary.LittleEndian.Uint16(clockSeqRand[:])
 
 	// Extract timestamp components
-	timeHigh := uint32((now >> 28) & 0xffffffff)   // Most significant 32 bits
-	timeMid := uint16((now >> 12) & 0xffff)        // Middle 16 bits
-	timeLow := uint16(now & 0x0fff)                // Least significant 12 bits
+	timeHigh := uint32((now >> 28) & 0xffffffff) // Most significant 32 bits
+	timeMid := uint16((now >> 12) & 0xffff)      // Middle 16 bits
+	timeLow := uint16(now & 0x0fff)              // Least significant 12 bits
 	clockSeq &= 0x3fff
 
 	// Store in big-endian order for v6
@@ -263,15 +263,6 @@ func (uuid UUID) Raw() [16]byte {
 	return [16]byte(uuidCopy)
 }
 
-// dump creates a copy as a byte slice.
-func (uuid UUID) dump() []byte {
-	dump := make([]byte, len(uuid))
-
-	copy(dump, uuid[:])
-
-	return dump
-}
-
 // ShortString returns a hexadecimal string representation
 // without separators.
 func (uuid UUID) ShortString() string {
@@ -282,16 +273,6 @@ func (uuid UUID) ShortString() string {
 // standardized separators.
 func (uuid UUID) String() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:16])
-}
-
-// setVersion sets the version part of the UUID.
-func (uuid *UUID) setVersion(v Version) {
-	uuid[6] = (uuid[6] & 0x0f) | (byte(v) << 4)
-}
-
-// setVariant sets the variant part of the UUID.
-func (uuid *UUID) setVariant(v Variant) {
-	uuid[8] = (uuid[8] & 0x1f) | (byte(v) << 5)
 }
 
 // NamespaceDNS returns the DNS namespace UUID for a v3 or a v5.
@@ -321,6 +302,25 @@ func NamespaceX500() UUID {
 //--------------------
 // PRIVATE HELPERS
 //--------------------
+
+// dump creates a copy as a byte slice.
+func (uuid UUID) dump() []byte {
+	dump := make([]byte, len(uuid))
+
+	copy(dump, uuid[:])
+
+	return dump
+}
+
+// setVersion sets the version part of the UUID.
+func (uuid *UUID) setVersion(v Version) {
+	uuid[6] = (uuid[6] & 0x0f) | (byte(v) << 4)
+}
+
+// setVariant sets the variant part of the UUID.
+func (uuid *UUID) setVariant(v Variant) {
+	uuid[8] = (uuid[8] & 0x1f) | (byte(v) << 5)
+}
 
 // parseSource parses a source based on the given pattern. Only the
 // char x of the pattern is interpreted as hex char. If the result is
