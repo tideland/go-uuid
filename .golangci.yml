@@ -1,42 +1,40 @@
-# golangci-lint configuration for Tideland Go UUID
-# This is a minimal configuration that passes schema validation
-# Advanced settings like linters-settings, exclude-rules, and detailed output
-# configuration are not supported by the current schema validator
-
 version: "2"
-
 run:
   timeout: 5m
-  tests: true
-  modules-download-mode: readonly
-
 linters:
   enable:
-    - errcheck # Check for unchecked errors
-    - gosimple # Simplify code
-    - govet # Report suspicious constructs
-    - ineffassign # Detect ineffectual assignments
-    - staticcheck # Static analysis checks
-    - unused # Check for unused code
-    - gofmt # Check code formatting
-    - goimports # Check import formatting
-    - misspell # Check for misspelled words
-    - gocritic # Comprehensive Go linter
-    - revive # Fast, configurable, extensible linter
-    - stylecheck # Replacement for golint
-  disable:
-    - structcheck # Deprecated linter
-    - deadcode # Deprecated linter
-    - varcheck # Deprecated linter
-
+    - errcheck
+    - errorlint
+    - ginkgolinter
+    - importas
+    - misspell
+    - wastedassign
+    - unused
+    - unparam
+    - goconst
+    - staticcheck
+    - ginkgolinter
+    - gocritic
+    - govet
+    - iface
+    - importas
+    - ineffassign
+    - nilerr
+    - reassign
+    - unconvert
+  settings:
+    unused:
+      # Mark all exported fields as used.
+      # default: true
+      exported-fields-are-used: false
+      # Mark all local variables as used.
+      # default: true
+      local-variables-are-used: false
+severity:
+  default: error
+formatters:
+  enable:
+    - gofmt
+    - goimports
 issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
-
-# output configuration removed due to schema restrictions
-
-# Note: The schema validator doesn't allow advanced configurations like:
-# - linters-settings (for configuring individual linters)
-# - exclude-rules (for path-based exclusions)
-# - detailed output settings
-# These can be added manually if needed for actual linting runs
+  fix: true
