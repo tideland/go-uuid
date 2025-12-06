@@ -10,9 +10,10 @@
 ## Description
 
 **Tideland Go UUID** provides functions for the creation and working with UUIDs in versions
-1, 3, 4, 5, 6, and 7 as per RFC 9562. The package supports:
+1, 2, 3, 4, 5, 6, and 7 as per RFC 9562. The package supports:
 
 - **Version 1**: Gregorian time-based with MAC address
+- **Version 2**: DCE Security with embedded POSIX UID/GID
 - **Version 3**: MD5 name-based
 - **Version 4**: Random/pseudorandom
 - **Version 5**: SHA-1 name-based
@@ -52,6 +53,11 @@ id, err := uuid.NewV6()
 
 // Version 1 (time-based with MAC)
 id, err := uuid.NewV1()
+
+// Version 2 (DCE Security with UID/GID)
+id, err = uuid.NewV2Person()  // Uses current process UID
+id, err = uuid.NewV2Group()   // Uses current process GID
+id, err = uuid.NewV2(uuid.Org, 12345)  // Custom domain and ID
 
 // Version 5 (name-based with SHA-1)
 ns := uuid.NamespaceDNS()
@@ -94,8 +100,31 @@ ns := uuid.NamespaceX500()  // X.500 namespace
 - **Use v7** for database primary keys, sortable IDs, or when creation time matters
 - **Use v4** for general-purpose unique identifiers when randomness is preferred
 - **Use v5/v3** when you need deterministic UUIDs from names
+- **Use v2** for security contexts requiring embedded POSIX UID/GID
 - **Use v6** when you need v1 compatibility with sorting
 - **Use v1** only for legacy compatibility (consider v6 or v7 instead)
+
+## DCE Security (Version 2)
+
+Version 2 UUIDs embed POSIX user or group identifiers:
+
+```go
+// Using current user's UID
+id, err := uuid.NewV2Person()
+fmt.Printf("Domain: %s, UID: %d\n", id.Domain(), id.ID())
+
+// Using current user's GID
+id, err = uuid.NewV2Group()
+fmt.Printf("Domain: %s, GID: %d\n", id.Domain(), id.ID())
+
+// Custom domain and identifier
+id, err = uuid.NewV2(uuid.Org, 12345)
+```
+
+**Domains:**
+- `uuid.Person` - POSIX UID (user identifier)
+- `uuid.Group` - POSIX GID (group identifier)
+- `uuid.Org` - Organization-specific identifier
 
 I hope you like it. ;)
 
