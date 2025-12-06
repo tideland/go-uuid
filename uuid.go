@@ -33,6 +33,7 @@ type Version byte
 // UUID versions and variants.
 const (
 	V1 Version = 1
+	V2 Version = 2
 	V3 Version = 3
 	V4 Version = 4
 	V5 Version = 5
@@ -48,6 +49,16 @@ const (
 	VariantRFC4122   Variant = 4 // The variant specified in RFC4122.
 	VariantMicrosoft Variant = 6 // Reserved, Microsoft Corporation backward compatibility.
 	VariantFuture    Variant = 7 // Reserved for future definition.
+)
+
+// Domain represents a DCE Security (Version 2) UUID domain.
+type Domain byte
+
+// Domain constants for DCE Security (Version 2) UUIDs.
+const (
+	Person Domain = 0 // POSIX UID domain
+	Group  Domain = 1 // POSIX GID domain
+	Org    Domain = 2 // Organization domain
 )
 
 // UUID represents a universal identifier with 16 bytes.
