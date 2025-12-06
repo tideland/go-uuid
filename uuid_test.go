@@ -355,6 +355,27 @@ func BenchmarkNewV1(b *testing.B) {
 	}
 }
 
+// BenchmarkNewV2 benchmarks UUID v2 generation.
+func BenchmarkNewV2(b *testing.B) {
+	for b.Loop() {
+		_, _ = uuid.NewV2(uuid.Person, 1000)
+	}
+}
+
+// BenchmarkNewV2Person benchmarks UUID v2 Person generation.
+func BenchmarkNewV2Person(b *testing.B) {
+	for b.Loop() {
+		_, _ = uuid.NewV2Person()
+	}
+}
+
+// BenchmarkNewV2Group benchmarks UUID v2 Group generation.
+func BenchmarkNewV2Group(b *testing.B) {
+	for b.Loop() {
+		_, _ = uuid.NewV2Group()
+	}
+}
+
 // BenchmarkNewV4 benchmarks UUID v4 generation.
 func BenchmarkNewV4(b *testing.B) {
 	for b.Loop() {
@@ -403,6 +424,62 @@ func BenchmarkString(b *testing.B) {
 	for b.Loop() {
 		_ = u.String()
 	}
+}
+
+// FuzzV2Domain fuzzes UUID v2 with various domain values.
+func FuzzV2Domain(f *testing.F) {
+	// Add seed corpus
+	f.Add(byte(0), uint32(1000))
+	f.Add(byte(1), uint32(2000))
+	f.Add(byte(2), uint32(3000))
+	f.Add(byte(255), uint32(0xFFFFFFFF))
+
+	f.Fuzz(func(t *testing.T, domainByte byte, id uint32) {
+		domain := uuid.Domain(domainByte)
+		u, err := uuid.NewV2(domain, id)
+		if err != nil {
+			t.Skip("Error generating UUID")
+		}
+
+		// Verify basic properties
+		verify.Equal(t, u.Version(), uuid.V2)
+		verify.Equal(t, u.Variant(), uuid.VariantRFC4122)
+		verify.Equal(t, u.Domain(), domain)
+		verify.Equal(t, u.ID(), id)
+
+		// Verify string representation is valid
+		s := u.String()
+		verify.Equal(t, len(s), 36)
+
+		// Verify parsing round-trip
+		parsed, err := uuid.Parse(s)
+		verify.NoError(t, err)
+		verify.Equal(t, parsed.String(), s)
+	})
+}
+
+// FuzzParse fuzzes UUID parsing with various inputs.
+func FuzzParse(f *testing.F) {
+	// Add seed corpus with valid UUIDs
+	f.Add("123e4567-e89b-12d3-a456-426614174000")
+	f.Add("urn:uuid:123e4567-e89b-12d3-a456-426614174000")
+	f.Add("{123e4567-e89b-12d3-a456-426614174000}")
+	f.Add("123e4567e89b12d3a456426614174000")
+
+	f.Fuzz(func(t *testing.T, input string) {
+		u, err := uuid.Parse(input)
+		if err != nil {
+			// Invalid input is expected, just skip
+			return
+		}
+
+		// If parsing succeeded, verify the UUID is valid
+		verify.Equal(t, len(u), 16)
+
+		// Verify we can convert it back to string
+		s := u.String()
+		verify.Equal(t, len(s), 36)
+	})
 }
 
 // EOF
