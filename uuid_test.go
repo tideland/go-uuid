@@ -143,6 +143,82 @@ func TestParse(t *testing.T) {
 	}
 }
 
+// TestV2DCESecurity tests DCE Security UUID generation and extraction.
+func TestV2DCESecurity(t *testing.T) {
+	// Test with different domains and IDs
+	tests := []struct {
+		name   string
+		domain uuid.Domain
+		id     uint32
+	}{
+		{"person-1000", uuid.Person, 1000},
+		{"group-2000", uuid.Group, 2000},
+		{"org-3000", uuid.Org, 3000},
+		{"person-zero", uuid.Person, 0},
+		{"group-max", uuid.Group, 0xFFFFFFFF},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			u, err := uuid.NewV2(test.domain, test.id)
+			verify.NoError(t, err)
+			verify.Equal(t, u.Version(), uuid.V2)
+			verify.Equal(t, u.Variant(), uuid.VariantRFC4122)
+			verify.Equal(t, u.Domain(), test.domain)
+			verify.Equal(t, u.ID(), test.id)
+			t.Logf("UUID V2 (%s): %v", test.domain, u)
+		})
+	}
+}
+
+// TestV2PersonAndGroup tests convenience functions for Person and Group domains.
+func TestV2PersonAndGroup(t *testing.T) {
+	// Test NewV2Person
+	uuidPerson, err := uuid.NewV2Person()
+	verify.NoError(t, err)
+	verify.Equal(t, uuidPerson.Version(), uuid.V2)
+	verify.Equal(t, uuidPerson.Domain(), uuid.Person)
+	t.Logf("UUID V2 Person: %v (UID: %d)", uuidPerson, uuidPerson.ID())
+
+	// Test NewV2Group
+	uuidGroup, err := uuid.NewV2Group()
+	verify.NoError(t, err)
+	verify.Equal(t, uuidGroup.Version(), uuid.V2)
+	verify.Equal(t, uuidGroup.Domain(), uuid.Group)
+	t.Logf("UUID V2 Group: %v (GID: %d)", uuidGroup, uuidGroup.ID())
+}
+
+// TestV2DomainString tests Domain.String() method.
+func TestV2DomainString(t *testing.T) {
+	tests := []struct {
+		domain   uuid.Domain
+		expected string
+	}{
+		{uuid.Person, "Person"},
+		{uuid.Group, "Group"},
+		{uuid.Org, "Org"},
+		{uuid.Domain(99), "Domain99"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.expected, func(t *testing.T) {
+			verify.Equal(t, test.domain.String(), test.expected)
+		})
+	}
+}
+
+// TestV2Uniqueness tests that multiple V2 UUIDs are unique.
+func TestV2Uniqueness(t *testing.T) {
+	seen := make(map[string]bool)
+	for i := 0; i < 100; i++ {
+		u, err := uuid.NewV2(uuid.Person, uint32(i))
+		verify.NoError(t, err)
+		s := u.String()
+		verify.False(t, seen[s], "UUID v2 should be unique")
+		seen[s] = true
+	}
+}
+
 // TestV6Sortability tests that UUIDv6 values are sortable by creation time.
 func TestV6Sortability(t *testing.T) {
 	uuids := make([]uuid.UUID, 100)
