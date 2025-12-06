@@ -6,12 +6,13 @@
 // by the new BSD license.
 
 // Package uuid provides a comprehensive implementation of Universally Unique Identifiers (UUIDs)
-// as defined in RFC 9562. It supports UUID versions 1, 3, 4, 5, 6, and 7 with full compliance
+// as defined in RFC 9562. It supports UUID versions 1, 2, 3, 4, 5, 6, and 7 with full compliance
 // to the specification.
 //
 // Key Features:
 //   - RFC 9562 compliant implementation
 //   - Time-ordered sortable UUIDs (v6, v7)
+//   - DCE Security UUIDs with POSIX UID/GID support (v2)
 //   - Improved database index locality
 //   - Concurrent-safe UUID generation
 //   - Multiple string format support
@@ -20,6 +21,9 @@
 // UUID Versions:
 //
 // Version 1: Gregorian time-based UUID with MAC address. Legacy format, consider v6 or v7 instead.
+//
+// Version 2: DCE Security UUID with embedded POSIX UID/GID. Used for security contexts where
+// local identifiers need to be embedded in UUIDs.
 //
 // Version 3: MD5 name-based UUID. Use v5 instead for better security.
 //
@@ -38,6 +42,12 @@
 //
 //	// Create a time-based sortable UUID (v7) - recommended
 //	id, err := uuid.NewV7()
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	// Create a DCE Security UUID (v2) with current user's UID
+//	id, err = uuid.NewV2Person()
 //	if err != nil {
 //		log.Fatal(err)
 //	}
@@ -104,11 +114,36 @@
 //	fmt.Println(id.Version()) // e.g., uuid.V7
 //	fmt.Println(id.Variant()) // uuid.VariantRFC4122
 //
+// DCE Security UUIDs (Version 2):
+//
+// Create UUIDs with embedded POSIX UIDs or GIDs for security contexts:
+//
+//	// Using current process UID
+//	id, err := uuid.NewV2Person()
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Printf("Domain: %s, UID: %d\n", id.Domain(), id.ID())
+//
+//	// Using current process GID
+//	id, err = uuid.NewV2Group()
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Printf("Domain: %s, GID: %d\n", id.Domain(), id.ID())
+//
+//	// Using custom domain and ID
+//	id, err = uuid.NewV2(uuid.Org, 12345)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
 // Choosing a UUID Version:
 //
 //   - Use v7 for database primary keys, sortable IDs, or when creation time matters
 //   - Use v4 for general-purpose unique identifiers when randomness is preferred
 //   - Use v5/v3 when you need deterministic UUIDs from names
+//   - Use v2 for security contexts requiring embedded POSIX UID/GID
 //   - Use v6 when you need v1 compatibility with sorting
 //   - Use v1 only for legacy compatibility (consider v6 or v7 instead)
 //
