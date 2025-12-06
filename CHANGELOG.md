@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.3.0 (2025-12-06)
+
+### Added
+* UUID version 2 (DCE Security) implementation with POSIX UID/GID support
+* `NewV2()` function for custom domain and ID
+* `NewV2Person()` convenience function using current process UID
+* `NewV2Group()` convenience function using current process GID
+* `Domain` type with Person, Group, and Org constants
+* `Domain()` method to extract domain from UUID v2
+* `ID()` method to extract local identifier from UUID v2
+* `Domain.String()` method for human-readable domain names
+* Comprehensive UUID v2 test suite with 95%+ coverage
+* UUID v2 benchmarks (NewV2, NewV2Person, NewV2Group)
+* Fuzz tests for UUID v2 domain values and parsing
+* Enhanced documentation with UUID v2 usage examples
+
+### Changed
+* Updated to Go 1.25
+* Enhanced golangci-lint configuration
+* Improved test coverage across all UUID versions
+* Updated documentation to include DCE Security UUID examples
+
 ## v0.2.0 (2025-12-04)
 
 ### Added
