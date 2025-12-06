@@ -19,6 +19,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -102,6 +103,45 @@ func NewV1() (UUID, error) {
 	uuid.setVersion(V1)
 	uuid.setVariant(VariantRFC4122)
 	return uuid, nil
+}
+
+// NewV2 generates a new UUID based on version 2 (DCE Security).
+// The domain should be one of Person, Group, or Org.
+// On a POSIX system, the id should be the user's UID for the Person
+// domain and the user's GID for the Group domain. The meaning of id for
+// the Org domain or on non-POSIX systems is site-defined.
+//
+// For a given domain/id pair, the same token may be returned for up to
+// 7 minutes and 10 seconds.
+func NewV2(domain Domain, id uint32) (UUID, error) {
+	// Start with a v1 UUID
+	uuid, err := NewV1()
+	if err != nil {
+		return uuid, err
+	}
+
+	// Replace time_low with the local ID
+	binary.BigEndian.PutUint32(uuid[0:4], id)
+
+	// Set the domain in the clock_seq_low position
+	uuid[9] = byte(domain)
+
+	// Set version to 2
+	uuid.setVersion(V2)
+
+	return uuid, nil
+}
+
+// NewV2Person returns a DCE Security (Version 2) UUID in the Person
+// domain with the id returned by os.Getuid.
+func NewV2Person() (UUID, error) {
+	return NewV2(Person, uint32(os.Getuid()))
+}
+
+// NewV2Group returns a DCE Security (Version 2) UUID in the Group
+// domain with the id returned by os.Getgid.
+func NewV2Group() (UUID, error) {
+	return NewV2(Group, uint32(os.Getgid()))
 }
 
 // NewV3 generates a new UUID based on version 3 (MD5 hash of a namespace
