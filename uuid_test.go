@@ -49,6 +49,15 @@ func TestVersions(t *testing.T) {
 	verify.Equal(t, uuidV1.Variant(), uuid.VariantRFC4122)
 	t.Logf("UUID V1: %v", uuidV1)
 
+	// Test UUID v2
+	uuidV2, err := uuid.NewV2(uuid.Person, 12345)
+	verify.NoError(t, err)
+	verify.Equal(t, uuidV2.Version(), uuid.V2)
+	verify.Equal(t, uuidV2.Variant(), uuid.VariantRFC4122)
+	verify.Equal(t, uuidV2.Domain(), uuid.Person)
+	verify.Equal(t, uuidV2.ID(), uint32(12345))
+	t.Logf("UUID V2: %v", uuidV2)
+
 	// Test UUID v3
 	uuidV3, err := uuid.NewV3(ns, name)
 	verify.NoError(t, err)
@@ -101,6 +110,7 @@ func TestParse(t *testing.T) {
 		{"v3-standard", func() string { u, _ := uuid.NewV3(ns, name); return u.String() }, uuid.V3, uuid.VariantRFC4122, ""},
 		{"v4-standard", func() string { u, _ := uuid.NewV4(); return u.String() }, uuid.V4, uuid.VariantRFC4122, ""},
 		{"v5-standard", func() string { u, _ := uuid.NewV5(ns, name); return u.String() }, uuid.V5, uuid.VariantRFC4122, ""},
+		{"v2-standard", func() string { u, _ := uuid.NewV2(uuid.Person, 1000); return u.String() }, uuid.V2, uuid.VariantRFC4122, ""},
 		{"v6-standard", func() string { u, _ := uuid.NewV6(); return u.String() }, uuid.V6, uuid.VariantRFC4122, ""},
 		{"v7-standard", func() string { u, _ := uuid.NewV7(); return u.String() }, uuid.V7, uuid.VariantRFC4122, ""},
 		{"v1-urn", func() string { u, _ := uuid.NewV1(); return "urn:uuid:" + u.String() }, uuid.V1, uuid.VariantRFC4122, ""},
@@ -109,6 +119,7 @@ func TestParse(t *testing.T) {
 		{"v4-braced", func() string { u, _ := uuid.NewV4(); return "{" + u.String() + "}" }, uuid.V4, uuid.VariantRFC4122, ""},
 		{"v1-short", func() string { u, _ := uuid.NewV1(); return u.ShortString() }, uuid.V1, uuid.VariantRFC4122, ""},
 		{"v4-short", func() string { u, _ := uuid.NewV4(); return u.ShortString() }, uuid.V4, uuid.VariantRFC4122, ""},
+		{"v2-short", func() string { u, _ := uuid.NewV2(uuid.Group, 2000); return u.ShortString() }, uuid.V2, uuid.VariantRFC4122, ""},
 		{"v7-short", func() string { u, _ := uuid.NewV7(); return u.ShortString() }, uuid.V7, uuid.VariantRFC4122, ""},
 		{"invalid-too-long", func() string { u, _ := uuid.NewV4(); return u.String() + "-ffaabb" }, 0, 0, "invalid source format"},
 		{"invalid-non-hex", func() string { return "abcdefabcdefZZZZefabcdefabcdefab" }, 0, 0, "source char 12 is no hex char"},
