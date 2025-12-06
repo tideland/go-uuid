@@ -350,6 +350,31 @@ func NamespaceX500() UUID {
 	return uuid
 }
 
+// Domain returns the domain for a Version 2 UUID.
+// Domains are only defined for Version 2 UUIDs.
+func (uuid UUID) Domain() Domain {
+	return Domain(uuid[9])
+}
+
+// ID returns the local identifier for a Version 2 UUID.
+// IDs are only defined for Version 2 UUIDs.
+func (uuid UUID) ID() uint32 {
+	return binary.BigEndian.Uint32(uuid[0:4])
+}
+
+// String returns the string representation of a Domain.
+func (d Domain) String() string {
+	switch d {
+	case Person:
+		return "Person"
+	case Group:
+		return "Group"
+	case Org:
+		return "Org"
+	}
+	return fmt.Sprintf("Domain%d", int(d))
+}
+
 //--------------------
 // PRIVATE HELPERS
 //--------------------
