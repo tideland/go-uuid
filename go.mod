@@ -1,6 +1,6 @@
 module tideland.dev/go/uuid
 
-go 1.24
+go 1.25
 
 require tideland.dev/go/asserts v0.2.1
 
