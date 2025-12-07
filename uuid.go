@@ -21,6 +21,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -101,7 +102,7 @@ func NewV1() (UUID, error) {
 	copy(uuid[10:16], cachedMACAddress)
 
 	uuid.setVersion(V1)
-	uuid.setVariant(VariantRFC4122)
+	uuid.setVariant()
 	return uuid, nil
 }
 
@@ -158,20 +159,21 @@ func NewV3(ns UUID, name []byte) (UUID, error) {
 	copy(uuid[:], hash.Sum([]byte{})[:16])
 
 	uuid.setVersion(V3)
-	uuid.setVariant(VariantRFC4122)
+	uuid.setVariant()
 	return uuid, nil
 }
 
 // NewV4 generates a new UUID based on version 4 (strong random number).
 func NewV4() (UUID, error) {
-	uuid := UUID{}
-	_, err := rand.Read([]byte(uuid[:]))
+	uuidRand := make([]byte, 16)
+	_, err := rand.Read(uuidRand)
 	if err != nil {
-		return uuid, err
+		return UUID(uuidRand), err
 	}
 
+	uuid := UUID(uuidRand)
 	uuid.setVersion(V4)
-	uuid.setVariant(VariantRFC4122)
+	uuid.setVariant()
 	return uuid, nil
 }
 
@@ -189,7 +191,7 @@ func NewV5(ns UUID, name []byte) (UUID, error) {
 	copy(uuid[:], hash.Sum([]byte{})[:16])
 
 	uuid.setVersion(V5)
-	uuid.setVariant(VariantRFC4122)
+	uuid.setVariant()
 	return uuid, nil
 }
 
@@ -221,37 +223,54 @@ func NewV6() (UUID, error) {
 	copy(uuid[10:16], cachedMACAddress)
 
 	uuid.setVersion(V6)
-	uuid.setVariant(VariantRFC4122)
+	uuid.setVariant()
 	return uuid, nil
 }
 
 // NewV7 generates a new UUID based on version 7 (Unix Epoch timestamp).
 // UUIDv7 features a time-ordered value field derived from Unix Epoch timestamp
 // in milliseconds with improved entropy characteristics.
+//
+// This implementation ensures monotonicity by using a counter for UUIDs
+// generated within the same millisecond, as recommended by RFC 9562 Section 6.2.
 func NewV7() (UUID, error) {
 	uuid := UUID{}
 
-	// Get Unix timestamp in milliseconds
-	now := time.Now()
-	unixMs := uint64(now.UnixMilli())
+	// Get time and sequence with monotonicity guarantee
+	ms, seq, err := getV7Time()
+	if err != nil {
+		return uuid, err
+	}
 
-	// Fill first 48 bits with timestamp
-	uuid[0] = byte(unixMs >> 40)
-	uuid[1] = byte(unixMs >> 32)
-	uuid[2] = byte(unixMs >> 24)
-	uuid[3] = byte(unixMs >> 16)
-	uuid[4] = byte(unixMs >> 8)
-	uuid[5] = byte(unixMs)
+	// Fill first 48 bits with timestamp (milliseconds)
+	uuid[0] = byte(ms >> 40)
+	uuid[1] = byte(ms >> 32)
+	uuid[2] = byte(ms >> 24)
+	uuid[3] = byte(ms >> 16)
+	uuid[4] = byte(ms >> 8)
+	uuid[5] = byte(ms)
 
-	// Fill remaining bits with random data
-	randData := make([]byte, 10)
+	// Fill next 12 bits (after version) with sequence counter
+	// This ensures monotonicity within the same millisecond
+	uuid[6] = byte(seq >> 8)
+	uuid[7] = byte(seq)
+
+	// Fill remaining 62 bits (after variant) with random data
+	randData := make([]byte, 8)
 	if _, err := rand.Read(randData); err != nil {
 		return uuid, err
 	}
-	copy(uuid[6:], randData)
+	uuid[8] = randData[0]
+	uuid[9] = randData[1]
+	uuid[10] = randData[2]
+	uuid[11] = randData[3]
+	uuid[12] = randData[4]
+	uuid[13] = randData[5]
+	uuid[14] = randData[6]
+	uuid[15] = randData[7]
 
 	uuid.setVersion(V7)
-	uuid.setVariant(VariantRFC4122)
+	uuid.setVariant()
 	return uuid, nil
 }
 
@@ -393,9 +412,10 @@ func (uuid *UUID) setVersion(v Version) {
 	uuid[6] = (uuid[6] & 0x0f) | (byte(v) << 4)
 }
 
-// setVariant sets the variant part of the UUID.
-func (uuid *UUID) setVariant(v Variant) {
-	uuid[8] = (uuid[8] & 0x1f) | (byte(v) << 5)
+// setVariant sets the variant part of the UUID, always RFC4122.
+// Used to keep source more consistent with version and variant.
+func (uuid *UUID) setVariant() {
+	uuid[8] = (uuid[8] & 0x1f) | (byte(VariantRFC4122) << 5)
 }
 
 // parseSource parses a source based on the given pattern. Only the
@@ -460,6 +480,66 @@ var cachedMACAddress []byte
 
 func init() {
 	cachedMACAddress = macAddress()
+}
+
+// v7State holds the state for monotonic UUID v7 generation.
+type v7State struct {
+	mu      sync.Mutex
+	lastMs  int64  // Last millisecond timestamp
+	lastSeq uint16 // Last sequence number
+}
+
+var v7Generator = &v7State{}
+
+// getV7Time returns the current time in milliseconds and a monotonic sequence number.
+// The returned values ensure that each UUID v7 is greater than the previous one,
+// even when multiple UUIDs are generated within the same millisecond.
+func getV7Time() (ms int64, seq uint16, err error) {
+	v7Generator.mu.Lock()
+	defer v7Generator.mu.Unlock()
+
+	// Get current time in milliseconds
+	now := time.Now().UnixMilli()
+
+	if now == v7Generator.lastMs {
+		// Same millisecond: increment sequence
+		if v7Generator.lastSeq == 0x0FFF {
+			// Sequence overflow - this is extremely rare but we should handle it
+			// Wait for the next millisecond
+			for now == v7Generator.lastMs {
+				time.Sleep(time.Microsecond * 100)
+				now = time.Now().UnixMilli()
+			}
+			// Initialize new sequence with random value
+			randBytes := make([]byte, 2)
+			if _, err := rand.Read(randBytes); err != nil {
+				return 0, 0, err
+			}
+			v7Generator.lastSeq = binary.BigEndian.Uint16(randBytes) & 0x0FFF
+		} else {
+			v7Generator.lastSeq++
+		}
+	} else if now > v7Generator.lastMs {
+		// New millisecond: initialize with random sequence
+		randBytes := make([]byte, 2)
+		if _, err := rand.Read(randBytes); err != nil {
+			return 0, 0, err
+		}
+		v7Generator.lastSeq = binary.BigEndian.Uint16(randBytes) & 0x0FFF
+		v7Generator.lastMs = now
+	} else {
+		// Clock went backwards - this is problematic
+		// Use the last known time and increment sequence
+		if v7Generator.lastSeq == 0x0FFF {
+			v7Generator.lastSeq = 0
+			v7Generator.lastMs++
+		} else {
+			v7Generator.lastSeq++
+		}
+		now = v7Generator.lastMs
+	}
+
+	return now, v7Generator.lastSeq, nil
 }
 
 // EOF
