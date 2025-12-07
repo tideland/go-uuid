@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.3.2 (2025-12-07)
+
+### Fixed
+* **CRITICAL**: Fixed UUIDv7 sortability by implementing monotonic counter
+* UUIDv7 now uses 12-bit sequence counter for same-millisecond UUIDs
+* Ensures strict lexicographic ordering even when generating thousands of UUIDs per millisecond
+* Handles clock rollback gracefully
+* Thread-safe implementation with mutex protection
+
+### Changed
+* Enhanced UUIDv7 test coverage with 10,000 UUID generation test
+* Improved TestV7Sortability to verify strict monotonic ordering
+* Updated TestV7Monotonicity to test 10,000 UUIDs instead of 1,000
+* Added detailed logging to sortability tests
+
+### Technical Details
+* Implements RFC 9562 Section 6.2 recommendations for monotonic counters
+* 48-bit millisecond timestamp + 12-bit sequence + 62-bit random data
+* Sequence counter randomly initialized per millisecond
+* Automatic sequence increment for same-millisecond UUIDs
+* Handles sequence overflow by waiting for next millisecond
+
 ## v0.3.1 (2025-12-07)
 
 ### Added
