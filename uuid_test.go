@@ -238,24 +238,7 @@ func TestV6Sortability(t *testing.T) {
 
 // TestV7Sortability tests that UUIDv7 values are sortable by creation time.
 func TestV7Sortability(t *testing.T) {
-	uuids := make([]uuid.UUID, 100)
-	for i := range 100 {
-		u, err := uuid.NewV7()
-		verify.NoError(t, err)
-		uuids[i] = u
-	}
-
-	// Verify each UUID is greater than or equal to the previous
-	for i := 1; i < len(uuids); i++ {
-		prev := uuids[i-1].String()
-		curr := uuids[i].String()
-		verify.True(t, curr >= prev, "UUIDs should be sortable")
-	}
-}
-
-// TestV7Monotonicity tests that UUIDv7 values are monotonic within same millisecond.
-func TestV7Monotonicity(t *testing.T) {
-	// Generate many UUIDs quickly to ensure some share the same millisecond
+	// Generate rapidly to test monotonicity within same millisecond
 	uuids := make([]uuid.UUID, 1000)
 	for i := range 1000 {
 		u, err := uuid.NewV7()
@@ -263,13 +246,46 @@ func TestV7Monotonicity(t *testing.T) {
 		uuids[i] = u
 	}
 
-	// Check that all UUIDs are unique
+	// Verify each UUID is strictly greater than the previous
+	// (not just >=, but > to ensure monotonicity)
+	for i := 1; i < len(uuids); i++ {
+		prev := uuids[i-1].String()
+		curr := uuids[i].String()
+		if curr <= prev {
+			t.Errorf("UUID at index %d not sortable: prev=%s, curr=%s", i, prev, curr)
+		}
+		verify.True(t, curr > prev, "Each UUID should be strictly greater than previous")
+	}
+
+	t.Logf("Successfully generated %d sortable UUIDs", len(uuids))
+}
+
+// TestV7Monotonicity tests that UUIDv7 values are monotonic within same millisecond.
+func TestV7Monotonicity(t *testing.T) {
+	// Generate many UUIDs quickly to ensure some share the same millisecond
+	uuids := make([]uuid.UUID, 10000)
+	for i := range 10000 {
+		u, err := uuid.NewV7()
+		verify.NoError(t, err)
+		uuids[i] = u
+	}
+
+	// Check that all UUIDs are unique and sortable
 	seen := make(map[string]bool)
-	for _, u := range uuids {
+	var prevStr string
+	for i, u := range uuids {
 		s := u.String()
 		verify.False(t, seen[s], "All UUIDs should be unique")
 		seen[s] = true
+
+		// Also verify monotonicity
+		if i > 0 {
+			verify.True(t, s > prevStr, "UUIDs should be monotonically increasing")
+		}
+		prevStr = s
 	}
+
+	t.Logf("Successfully generated %d unique, monotonic UUIDs", len(uuids))
 }
 
 // TestConcurrentGeneration tests concurrent UUID generation.
