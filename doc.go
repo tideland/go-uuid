@@ -34,6 +34,7 @@
 // Version 6: Reordered Gregorian time-based UUID. Compatible with v1 but sortable.
 //
 // Version 7: Unix Epoch time-based UUID. Recommended for database keys and sortable IDs.
+// Implements monotonic counter for UUIDs generated within the same millisecond to ensure sortability.
 //
 // Basic Usage:
 //
@@ -166,6 +167,18 @@
 //
 // UUIDv7 generation is highly performant and suitable for high-throughput applications.
 // Benchmark results show generation rates of millions of UUIDs per second on modern hardware.
+// The implementation uses a monotonic counter to ensure sortability even when generating
+// thousands of UUIDs within a single millisecond.
+//
+// Monotonicity Guarantees:
+//
+// UUIDv7 maintains strict monotonicity through a combination of:
+//   - 48-bit millisecond timestamp
+//   - 12-bit monotonic sequence counter (incremented for same-millisecond UUIDs)
+//   - 62 bits of random data
+//
+// This ensures that each UUID is lexicographically greater than the previous, making
+// them ideal for database indexes and time-ordered collections.
 
 package uuid
 
