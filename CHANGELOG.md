@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.1 (2025-12-07)
+
+### Added
+* Comprehensive Makefile for automated build process
+* Makefile targets: all, help, tidy, lint, build, test, bench, fuzz, coverage, clean, install-tools, ci
+* Color-coded output for better readability
+* Automatic dependency handling between targets
+* Coverage report generation (HTML format)
+* Development tools installation script
+* Detailed Makefile usage documentation in README.md
+
+### Changed
+* Enhanced README.md with complete Makefile documentation
+* Added development workflow section
+* Improved contributor onboarding with make targets
+
 ## v0.3.0 (2025-12-06)
 
 ### Added
