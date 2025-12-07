@@ -35,6 +35,62 @@
 go get tideland.dev/go/uuid
 ```
 
+## Development
+
+The package includes a comprehensive Makefile for development tasks:
+
+```bash
+# Show all available targets
+make help
+
+# Run complete build process (tidy, lint, build, test)
+make all
+
+# Update go.mod and go.sum
+make tidy
+
+# Run golangci-lint
+make lint
+
+# Build the package
+make build
+
+# Run tests with race detector
+make test
+
+# Run benchmarks
+make bench
+
+# Run fuzz tests
+make fuzz
+
+# Generate coverage report
+make coverage
+
+# Clean build artifacts
+make clean
+
+# Install development tools
+make install-tools
+```
+
+### Makefile Targets
+
+| Target | Description |
+|--------|-------------|
+| `all` | Run complete build process (tidy, lint, build, test) |
+| `help` | Display available targets |
+| `tidy` | Update go.mod and go.sum files |
+| `lint` | Run golangci-lint on source code |
+| `build` | Build the package (verify compilation) |
+| `test` | Run all tests with race detector |
+| `bench` | Run benchmarks |
+| `fuzz` | Run fuzz tests (30 seconds each) |
+| `coverage` | Generate test coverage report (HTML) |
+| `clean` | Remove build artifacts and coverage files |
+| `install-tools` | Install required development tools |
+| `ci` | Run CI pipeline (tidy, lint, build, test) |
+
 ## Usage
 
 ### Creating UUIDs
