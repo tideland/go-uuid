@@ -8,6 +8,7 @@
 # Variables
 GO := go
 GOLANGCI_LINT := golangci-lint
+GOLANGCI_LINT_VERSION := v2.7.0
 COVERAGE_FILE := coverage.out
 COVERAGE_HTML := coverage.html
 
@@ -22,7 +23,7 @@ COLOR_BLUE := \033[34m
 .DEFAULT_GOAL := all
 
 # Phony targets
-.PHONY: all help tidy lint build test bench fuzz coverage clean install-tools
+.PHONY: all help tidy lint build test bench fuzz coverage clean install-tools check-tools
 
 ## all: Run complete build process (tidy, lint, build, test)
 all: tidy lint build test
@@ -94,10 +95,22 @@ clean:
 ## install-tools: Install required development tools
 install-tools:
 	@echo "$(COLOR_YELLOW)→ Installing development tools...$(COLOR_RESET)"
-	@which $(GOLANGCI_LINT) > /dev/null || \
-		(echo "Installing golangci-lint..." && \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin)
+	@which $(GOLANGCI_LINT) > /dev/null 2>&1 || \
+		(echo "Installing golangci-lint $(GOLANGCI_LINT_VERSION)..." && \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin $(GOLANGCI_LINT_VERSION))
+	@$(GOLANGCI_LINT) version | grep -q "has version $(shell echo $(GOLANGCI_LINT_VERSION) | sed 's/v//')" || \
+		(echo "Updating golangci-lint to $(GOLANGCI_LINT_VERSION)..." && \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin $(GOLANGCI_LINT_VERSION))
 	@echo "$(COLOR_GREEN)✓ Tools installed$(COLOR_RESET)"
+
+## check-tools: Check installed tool versions and compatibility
+check-tools:
+	@echo "$(COLOR_YELLOW)→ Checking tool versions...$(COLOR_RESET)"
+	@echo "$(COLOR_BLUE)Go version:$(COLOR_RESET)"
+	@$(GO) version
+	@echo "$(COLOR_BLUE)golangci-lint version:$(COLOR_RESET)"
+	@$(GOLANGCI_LINT) version || echo "$(COLOR_YELLOW)golangci-lint not found - run 'make install-tools'$(COLOR_RESET)"
+	@echo "$(COLOR_GREEN)✓ Tool version check completed$(COLOR_RESET)"
 
 ## ci: Run CI pipeline (used by GitHub Actions)
 ci: tidy lint build test
