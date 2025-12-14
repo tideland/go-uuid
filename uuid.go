@@ -198,22 +198,24 @@ func NewV5(ns UUID, name []byte) (UUID, error) {
 // NewV6 generates a new UUID based on version 6 (reordered Gregorian timestamp).
 // UUIDv6 is a field-compatible version of UUIDv1, reordered for improved DB locality.
 // The timestamp bytes are stored from most to least significant for better sortability.
+//
+// This implementation ensures monotonicity by using a counter for the clock sequence
+// when UUIDs are generated within the same timestamp period.
 func NewV6() (UUID, error) {
 	uuid := UUID{}
 	epoch := int64(0x01b21dd213814000)
 	now := uint64(time.Now().UnixNano()/100 + epoch)
 
-	clockSeqRand := [2]byte{}
-	if _, err := rand.Read(clockSeqRand[:]); err != nil {
+	// Get monotonic clock sequence and adjusted timestamp
+	adjustedNow, clockSeq, err := getV6ClockSeq(now)
+	if err != nil {
 		return uuid, err
 	}
-	clockSeq := binary.LittleEndian.Uint16(clockSeqRand[:])
 
 	// Extract timestamp components
-	timeHigh := uint32((now >> 28) & 0xffffffff) // Most significant 32 bits
-	timeMid := uint16((now >> 12) & 0xffff)      // Middle 16 bits
-	timeLow := uint16(now & 0x0fff)              // Least significant 12 bits
-	clockSeq &= 0x3fff
+	timeHigh := uint32((adjustedNow >> 28) & 0xffffffff) // Most significant 32 bits
+	timeMid := uint16((adjustedNow >> 12) & 0xffff)      // Middle 16 bits
+	timeLow := uint16(adjustedNow & 0x0fff)              // Least significant 12 bits
 
 	// Store in big-endian order for v6
 	binary.BigEndian.PutUint32(uuid[0:4], timeHigh)
@@ -482,6 +484,13 @@ func init() {
 	cachedMACAddress = macAddress()
 }
 
+// v6State holds the state for monotonic UUID v6 generation.
+type v6State struct {
+	mu           sync.Mutex
+	lastTime     uint64 // Last timestamp (in 100ns intervals)
+	lastClockSeq uint16 // Last clock sequence
+}
+
 // v7State holds the state for monotonic UUID v7 generation.
 type v7State struct {
 	mu      sync.Mutex
@@ -489,6 +498,7 @@ type v7State struct {
 	lastSeq uint16 // Last sequence number
 }
 
+var v6Generator = &v6State{}
 var v7Generator = &v7State{}
 
 // getV7Time returns the current time in milliseconds and a monotonic sequence number.
@@ -498,28 +508,30 @@ func getV7Time() (ms int64, seq uint16, err error) {
 	v7Generator.mu.Lock()
 	defer v7Generator.mu.Unlock()
 
-	// Get current time in milliseconds
+	// Get current time in milliseconds - capture once to avoid inconsistencies
 	now := time.Now().UnixMilli()
 
-	if now == v7Generator.lastMs {
+	switch {
+	case now == v7Generator.lastMs:
 		// Same millisecond: increment sequence
 		if v7Generator.lastSeq == 0x0FFF {
 			// Sequence overflow - this is extremely rare but we should handle it
 			// Wait for the next millisecond
-			for now == v7Generator.lastMs {
+			for {
 				time.Sleep(time.Microsecond * 100)
-				now = time.Now().UnixMilli()
+				newNow := time.Now().UnixMilli()
+				if newNow > now {
+					now = newNow
+					break
+				}
 			}
-			// Initialize new sequence with random value
-			randBytes := make([]byte, 2)
-			if _, err := rand.Read(randBytes); err != nil {
-				return 0, 0, err
-			}
-			v7Generator.lastSeq = binary.BigEndian.Uint16(randBytes) & 0x0FFF
+			// Start with sequence 0 for new millisecond after overflow
+			v7Generator.lastSeq = 0
+			v7Generator.lastMs = now
 		} else {
 			v7Generator.lastSeq++
 		}
-	} else if now > v7Generator.lastMs {
+	case now > v7Generator.lastMs:
 		// New millisecond: initialize with random sequence
 		randBytes := make([]byte, 2)
 		if _, err := rand.Read(randBytes); err != nil {
@@ -527,7 +539,7 @@ func getV7Time() (ms int64, seq uint16, err error) {
 		}
 		v7Generator.lastSeq = binary.BigEndian.Uint16(randBytes) & 0x0FFF
 		v7Generator.lastMs = now
-	} else {
+	default:
 		// Clock went backwards - this is problematic
 		// Use the last known time and increment sequence
 		if v7Generator.lastSeq == 0x0FFF {
@@ -540,6 +552,56 @@ func getV7Time() (ms int64, seq uint16, err error) {
 	}
 
 	return now, v7Generator.lastSeq, nil
+}
+
+// getV6ClockSeq returns a monotonic clock sequence for UUID v6 generation.
+// The returned clock sequence ensures that each UUID v6 is greater than the previous one,
+// even when multiple UUIDs are generated within the same timestamp period.
+func getV6ClockSeq(timestamp uint64) (adjustedTimestamp uint64, clockSeq uint16, err error) {
+	v6Generator.mu.Lock()
+	defer v6Generator.mu.Unlock()
+
+	switch {
+	case timestamp == v6Generator.lastTime:
+		// Same timestamp: increment clock sequence
+		if v6Generator.lastClockSeq == 0x3FFF {
+			// Clock sequence overflow - this is extremely rare
+			// Wait for the next timestamp unit (100ns)
+			for timestamp == v6Generator.lastTime {
+				time.Sleep(time.Nanosecond * 100)
+				epoch := int64(0x01b21dd213814000)
+				timestamp = uint64(time.Now().UnixNano()/100 + epoch)
+			}
+			// Initialize new clock sequence with random value
+			randBytes := make([]byte, 2)
+			if _, err := rand.Read(randBytes); err != nil {
+				return 0, 0, err
+			}
+			v6Generator.lastClockSeq = binary.BigEndian.Uint16(randBytes) & 0x3FFF
+		} else {
+			v6Generator.lastClockSeq++
+		}
+	case timestamp > v6Generator.lastTime:
+		// New timestamp: initialize with random clock sequence
+		randBytes := make([]byte, 2)
+		if _, err := rand.Read(randBytes); err != nil {
+			return 0, 0, err
+		}
+		v6Generator.lastClockSeq = binary.BigEndian.Uint16(randBytes) & 0x3FFF
+		v6Generator.lastTime = timestamp
+	default:
+		// Clock went backwards - this is problematic
+		// Use the last known time and increment clock sequence
+		if v6Generator.lastClockSeq == 0x3FFF {
+			v6Generator.lastClockSeq = 0
+			v6Generator.lastTime++
+		} else {
+			v6Generator.lastClockSeq++
+		}
+		timestamp = v6Generator.lastTime
+	}
+
+	return timestamp, v6Generator.lastClockSeq, nil
 }
 
 // EOF

@@ -19,7 +19,7 @@ COLOR_YELLOW := \033[33m
 COLOR_BLUE := \033[34m
 
 # Default target
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := all
 
 # Phony targets
 .PHONY: all help tidy lint build test bench fuzz coverage clean install-tools
