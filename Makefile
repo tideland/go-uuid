@@ -8,7 +8,7 @@
 # Variables
 GO := go
 GOLANGCI_LINT := golangci-lint
-GOLANGCI_LINT_VERSION := v2.7.0
+GOLANGCI_LINT_VERSION := v2.7.2
 COVERAGE_FILE := coverage.out
 COVERAGE_HTML := coverage.html
 
