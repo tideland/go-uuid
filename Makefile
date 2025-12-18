@@ -31,7 +31,7 @@ all: tidy lint build test
 
 ## help: Display this help message
 help:
-	@echo "$(COLOR_BOLD)Tideland Go UUID - Available Targets:$(COLOR_RESET)"
+	@echo "$(COLOR_BOLD)Tideland Go Actor - Available Targets:$(COLOR_RESET)"
 	@echo ""
 	@sed -n 's/^##//p' $(MAKEFILE_LIST) | column -t -s ':' | sed -e 's/^/ /'
 	@echo ""
@@ -73,8 +73,7 @@ bench:
 fuzz:
 	@echo "$(COLOR_YELLOW)→ Running fuzz tests...$(COLOR_RESET)"
 	@echo "$(COLOR_BLUE)Note: Fuzz tests run for 30 seconds each$(COLOR_RESET)"
-	@$(GO) test -fuzz=FuzzV2Domain -fuzztime=30s -run=^$$ ./...
-	@$(GO) test -fuzz=FuzzParse -fuzztime=30s -run=^$$ ./...
+	@$(GO) test -fuzz=FuzzAction -fuzztime=30s -run=^$$ ./...
 	@echo "$(COLOR_GREEN)✓ Fuzz tests completed$(COLOR_RESET)"
 
 ## coverage: Generate test coverage report
