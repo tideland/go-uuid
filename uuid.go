@@ -12,9 +12,9 @@ package uuid
 //--------------------
 
 import (
-	"crypto/md5" // #nosec G501
+	"crypto/md5"
 	"crypto/rand"
-	"crypto/sha1" // #nosec G505
+	"crypto/sha1"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -153,7 +153,7 @@ func NewV2Group() (UUID, error) {
 // and a name).
 func NewV3(ns UUID, name []byte) (UUID, error) {
 	uuid := UUID{}
-	hash := md5.New() // #nosec G401
+	hash := md5.New()
 	if _, err := hash.Write(ns.dump()); err != nil {
 		return uuid, err
 	}
@@ -185,7 +185,7 @@ func NewV4() (UUID, error) {
 // and a name).
 func NewV5(ns UUID, name []byte) (UUID, error) {
 	uuid := UUID{}
-	hash := sha1.New() // #nosec G401
+	hash := sha1.New()
 	if _, err := hash.Write(ns.dump()); err != nil {
 		return uuid, err
 	}
