@@ -354,14 +354,14 @@ func TestRawAndCopy(t *testing.T) {
 	}
 
 	// Test Copy creates independent copy
-	copy := u.Copy()
-	verify.Equal(t, u.String(), copy.String())
+	uuidCopy := u.Copy()
+	verify.Equal(t, u.String(), uuidCopy.String())
 
 	// Modify original, copy should be unchanged
 	original := u.String()
 	u[0] = 0xFF
 	verify.Different(t, u.String(), original)
-	verify.Equal(t, copy.String(), original)
+	verify.Equal(t, uuidCopy.String(), original)
 }
 
 // BenchmarkNewV1 benchmarks UUID v1 generation.

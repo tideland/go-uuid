@@ -12,9 +12,9 @@ package uuid
 //--------------------
 
 import (
-	"crypto/md5"
+	"crypto/md5" // #nosec G501
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -47,10 +47,14 @@ const (
 type Variant byte
 
 const (
-	VariantNCS       Variant = 0 // Reserved, NCS backward compatibility.
-	VariantRFC4122   Variant = 4 // The variant specified in RFC4122.
-	VariantMicrosoft Variant = 6 // Reserved, Microsoft Corporation backward compatibility.
-	VariantFuture    Variant = 7 // Reserved for future definition.
+	// VariantNCS is reserved for NCS backward compatibility.
+	VariantNCS Variant = 0
+	// VariantRFC4122 is the variant specified in RFC4122.
+	VariantRFC4122 Variant = 4
+	// VariantMicrosoft is reserved for Microsoft Corporation backward compatibility.
+	VariantMicrosoft Variant = 6
+	// VariantFuture is reserved for future definition.
+	VariantFuture Variant = 7
 )
 
 // Domain represents a DCE Security (Version 2) UUID domain.
@@ -149,7 +153,7 @@ func NewV2Group() (UUID, error) {
 // and a name).
 func NewV3(ns UUID, name []byte) (UUID, error) {
 	uuid := UUID{}
-	hash := md5.New()
+	hash := md5.New() // #nosec G401
 	if _, err := hash.Write(ns.dump()); err != nil {
 		return uuid, err
 	}
@@ -181,7 +185,7 @@ func NewV4() (UUID, error) {
 // and a name).
 func NewV5(ns UUID, name []byte) (UUID, error) {
 	uuid := UUID{}
-	hash := sha1.New()
+	hash := sha1.New() // #nosec G401
 	if _, err := hash.Write(ns.dump()); err != nil {
 		return uuid, err
 	}

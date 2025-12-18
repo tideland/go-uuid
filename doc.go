@@ -179,7 +179,6 @@
 //
 // This ensures that each UUID is lexicographically greater than the previous, making
 // them ideal for database indexes and time-ordered collections.
-
 package uuid
 
 // EOF
