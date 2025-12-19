@@ -12,16 +12,7 @@ SHELL = /usr/bin/env bash -o pipefail
 # Set MAKEFLAGS to suppress entering/leaving directory messages
 MAKEFLAGS += --no-print-directory
 
-BUILD_PATH ?= $(shell pwd)
-HACK_DIR ?= $(shell cd hack 2>/dev/null && pwd)
-LOCALBIN ?= $(BUILD_PATH)/bin
-
 GO ?= go
-SETUP_ENVTEST_VERSION ?= release-0.22
-ADDLICENSE_VERSION ?= v1.1.1
-CONTROLLER_TOOLS_VERSION ?= v0.19.0
-ENVTEST_K8S_VERSION ?= 1.34.1
-CRD_REF_DOCS_VERSION ?= v0.2.0
 COVERAGE_FILE := coverage.out
 COVERAGE_HTML := coverage.html
 
@@ -44,7 +35,7 @@ all: tidy build test
 
 ## help: Display this help message
 help:
-	@echo "$(COLOR_BOLD)Tideland Go Actor - Available Targets:$(COLOR_RESET)"
+	@echo "$(COLOR_BOLD)Tideland Go UUID - Available Targets:$(COLOR_RESET)"
 	@echo ""
 	@sed -n 's/^##//p' $(MAKEFILE_LIST) | column -t -s ':' | sed -e 's/^/ /'
 	@echo ""
